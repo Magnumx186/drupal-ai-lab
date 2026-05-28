@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ${GHCR_IMAGE:-ghcr.io/owner/drupal-ai-lab:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      DRUPAL_DB_DRIVER: ${DRUPAL_DB_DRIVER:-mysql}
+      DRUPAL_DB_HOST: ${DRUPAL_DB_HOST:-db}
+      DRUPAL_DB_PORT: ${DRUPAL_DB_PORT:-3306}
+      DRUPAL_DB_NAME: ${DRUPAL_DB_NAME:?Set DRUPAL_DB_NAME}
+      DRUPAL_DB_USER: ${DRUPAL_DB_USER:?Set DRUPAL_DB_USER}
+      DRUPAL_DB_PASSWORD: ${DRUPAL_DB_PASSWORD:?Set DRUPAL_DB_PASSWORD}
+      DRUPAL_HASH_SALT: ${DRUPAL_HASH_SALT:?Set DRUPAL_HASH_SALT}
+      DRUPAL_CONFIG_SYNC_DIR: ${DRUPAL_CONFIG_SYNC_DIR:-/var/www/html/config/sync}
+      DRUPAL_TRUSTED_HOSTS: ${DRUPAL_TRUSTED_HOSTS:-localhost}
+      DRUPAL_DEPLOYMENT_IDENTIFIER: ${DRUPAL_DEPLOYMENT_IDENTIFIER:-local}
+      DRUPAL_REVERSE_PROXY: ${DRUPAL_REVERSE_PROXY:-false}
+      DRUPAL_REVERSE_PROXY_ADDRESSES: ${DRUPAL_REVERSE_PROXY_ADDRESSES:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-}
+      OLLAMA_PORT: ${OLLAMA_PORT:-11434}
+    volumes:
+      - drupal_files:/var/www/html/web/sites/default/files
+
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DRUPAL_DB_NAME:?Set DRUPAL_DB_NAME}
+      MARIADB_USER: ${DRUPAL_DB_USER:?Set DRUPAL_DB_USER}
+      MARIADB_PASSWORD: ${DRUPAL_DB_PASSWORD:?Set DRUPAL_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  drupal_files:
+  mariadb_data:
